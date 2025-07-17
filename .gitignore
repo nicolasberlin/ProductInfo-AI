@@ -1,0 +1,17 @@
+#Ignorer l'environement virtuel
+
+venv/
+
+# Fichiers Python compilés
+__pycache__/
+*.pyc
+
+# Variables d’environnement (secrets, API keys)
+.env
+
+# Dossiers de config d’éditeur
+.vscode/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
