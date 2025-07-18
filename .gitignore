@@ -1,5 +1,4 @@
 #Ignorer l'environement virtuel
-
 venv/
 
 # Fichiers Python compilés
@@ -15,3 +14,6 @@ __pycache__/
 # Fichiers système
 .DS_Store
 Thumbs.db
+
+#PDF
+data/
