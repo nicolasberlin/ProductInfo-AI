@@ -1,5 +1,6 @@
-#Ignorer l'environement virtuel
+# Ignorer l'environnement virtuel
 venv/
+.venv/
 
 # Fichiers Python compilés
 __pycache__/
@@ -15,5 +16,33 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-#PDF
-data/
+# Données locales
+data/*
+!data/.gitkeep
+
+# Modèles et poids
+*.bin
+*.pt
+*.ckpt
+*.safetensors
+out/qwen-2.5-3b-lora/
+offload/
+
+# Dossiers de sortie et checkpoints
+out/
+runs/
+checkpoints/
+
+# Logs et fichiers lourds
+*.log
+*.csv
+*.jsonl
+
+# Caches de libs
+.cache/
+huggingface/
+torch_cache/
+
+# Notebooks Jupyter
+.ipynb_checkpoints/
+*.ipynb~
