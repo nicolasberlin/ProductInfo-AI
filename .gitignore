@@ -17,8 +17,7 @@ __pycache__/
 Thumbs.db
 
 # Données locales
-data/*
-!data/.gitkeep
+data/
 
 # Modèles et poids
 *.bin
