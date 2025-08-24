@@ -2,7 +2,7 @@
 import sys
 import time
 import json
-import torch
+import torchs
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from peft import PeftModel
 
@@ -44,7 +44,7 @@ model = AutoModelForCausalLM.from_pretrained(
 model = PeftModel.from_pretrained(model, LORA)
 model.eval()
 
-def chunk_by_tokens(text, chunk_size=1250, overlap=150):
+def chunk_by_tokens(text, chunk_size=1250, overlap=100):
     tokens = tok.encode(text)
     nb_tokens = len(tokens)
     if nb_tokens <= chunk_size:
@@ -62,16 +62,32 @@ def chunk_by_tokens(text, chunk_size=1250, overlap=150):
         start += stride
     return chunks
 
-
 def _messages_frame():
     return [
-        {"role":"system","content":"You output only one JSON with key \"items\"."},
-        {"role":"user","content":(
-            "Extract product names and patent numbers. "
-            "Return JSON only with key \"items\" which is a list of objects: "
-            "each object has \"product\" (string) and \"patents\" (list of strings).\n\n"
-            "TEXT:\n{DOC}"
-        )}
+        {
+            "role": "system",
+            "content": (
+                'You are an extraction engine. Output ONLY NDJSON (one JSON object per line), '
+                'then a final line "<END_JSON>" and nothing else. '
+                'Each object has exactly: '
+                '{"product": "<string>", "patents": ["<string>", ...]}. '
+                'Use ONLY information explicitly present in TEXT. '
+                'Group patents under a product ONLY if they appear on the SAME line or the SAME local block as that product. '
+                'If one line/block lists multiple products for one patent, output one object per product with that patent. '
+                'Do NOT merge information across distant parts of the document. '
+                'Avoid duplicates inside each "patents" list. '
+                'Max 200 objects for this chunk.\n\n'
+                'Example (INPUT lines):\n'
+                'US9243983  BMD\n'
+                'US9476797  MEXA-ONE series, MEXA-1700D\n\n'
+                'Example (NDJSON OUTPUT):\n'
+                '{"product":"BMD","patents":["US9243983"]}\n'
+                '{"product":"MEXA-ONE series","patents":["US9476797"]}\n'
+                '{"product":"MEXA-1700D","patents":["US9476797"]}\n'
+                '<END_JSON>'
+            )
+        },
+        {"role": "user", "content": "TEXT:\n{DOC}"}
     ]
 
 def ask(text: str) -> str:
@@ -90,7 +106,7 @@ def ask(text: str) -> str:
 
     n_prompt = inputs["input_ids"].shape[-1]
     budget = context_max - n_prompt
-    max_new = min(3000, budget)
+    max_new = min(800, budget)
 
     # --- EOS robust handling ---
     im_end_id = tok.convert_tokens_to_ids("<|im_end|>")
@@ -122,11 +138,20 @@ def ask(text: str) -> str:
     print(f"[infer] generated={gen_len} tokens in {dt:.2f}s (~{gen_len/max(dt,1e-6):.2f} tok/s)", file=sys.stderr)
 
     res = tok.decode(gen_ids, skip_special_tokens=True).strip()
-    return res 
+    print(f"[infer] response length={len(res)} tokens", file=sys.stderr)
+    return res
 
 def ask_url(url: str) -> str:
     raw = fetch_text(url)
-    return ask(raw)
+    chunks = chunk_by_tokens(raw)
+    results = []
+    for i, chunk in enumerate(chunks):
+        print(f"[infer] Processing chunk {i+1}/{len(chunks)}", file=sys.stderr)
+        result = ask(chunk)
+        results.append(result)
+        print(f"[infer] ✅ Chunk {i+1} processed", file=sys.stderr)
+        print(f"\n[chunk {i+1} output]\n{result}\n")  # <-- Affiche le contenu généré pour chaque chunk
+    return "\n".join(results)
 
 # ---------------------------------------------------------------------
 # CLI
