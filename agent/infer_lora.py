@@ -2,7 +2,7 @@
 import sys
 import time
 import json
-import torchs
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 from peft import PeftModel
 
