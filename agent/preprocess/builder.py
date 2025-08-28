@@ -2,8 +2,12 @@ from extractor import fetch_text
 import pandas as pd
 import json
 
-sheets = pd.read_excel("agent/data/Labels_URLs.xlsx", sheet_name=None, dtype=str)
-df = pd.concat(sheets.values(), ignore_index=True).fillna("")
+path = "agent/data/Labels_URLs_normalized_revised.xlsx"
+xls = pd.ExcelFile(path)
+keep = xls.sheet_names[:-1]               # toutes sauf la dernière
+
+sheets = pd.read_excel(path, sheet_name=keep, dtype=str)  # dict {sheet: DF}
+df = pd.concat(list(sheets.values()), ignore_index=True).fillna("")
 
 with open('agent/data/json_data.txt', 'w', encoding='utf-8') as f:
     for url, grp in df.groupby("URL"):
@@ -15,9 +19,11 @@ with open('agent/data/json_data.txt', 'w', encoding='utf-8') as f:
                 items.append({"product": name, "patents": patents})
 
         user = (
-            "Extract product names and patent numbers. "
-            "Return JSON only with key \"items\" which is a list of objects: "
-            "each object has \"product\" (string) and \"patents\" (list of strings)."
+            "Extract product names and patent numbers from TEXT.\n"
+            "Return ONLY JSON with key \"items\" = list of {\"product\", \"patents\"}.\n"
+            "Rules: use canonical IDs only. "
+            "Do NOT invent IDs. Ignore bare numbers without country code. "
+            "If none, return an empty list for that product."
             "\n\nTEXT:\n" + fetch_text(url)
         )
         message = {

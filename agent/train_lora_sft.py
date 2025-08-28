@@ -12,7 +12,7 @@ dtype = torch.float16 if use_mps else (torch.bfloat16 if (use_cuda and torch.cud
 print(f"[precision] cuda={use_cuda} mps={use_mps} dtype={dtype}")
 
 BASE = "Qwen/Qwen2.5-3B-Instruct"
-DATA = "agent/data/train.jsonl"
+DATA = "agent/data/json_data.txt"
 OUT  = "out/qwen-2.5-3b-lora"
 
 # --- Tokenizer ---
@@ -20,21 +20,18 @@ tok = AutoTokenizer.from_pretrained(BASE, use_fast=True)
 if tok.pad_token is None:
     tok.pad_token = tok.eos_token
 tok.padding_side = "right"
-tok.model_max_length = 2048  # borne côté tokenization
+tok.model_max_length = 800  # borne côté tokenization
 
 # --- Model: charger complètement sur CPU, puis déplacer (évite meta/warmup MPS) ---
 model = AutoModelForCausalLM.from_pretrained(
     BASE,
-    torch_dtype=torch.float32 if not use_cuda else dtype,  # charge proprement
-    device_map=None,
+    torch_dtype="auto",  # charge proprement
+    device_map="auto",
     low_cpu_mem_usage=False
 )
-if use_cuda:
-    model = model.to("cuda")
-elif use_mps:
-    model = model.to("mps", dtype=torch.float16)
 
 model.config.use_cache = False
+
 try:
     model.gradient_checkpointing_enable()
 except Exception:
