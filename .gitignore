@@ -20,11 +20,7 @@ Thumbs.db
 data/
 
 # Modèles et poids
-*.bin
-*.pt
-*.ckpt
-*.safetensors
-out/qwen-2.5-3b-lora/
+
 offload/
 
 # Dossiers de sortie et checkpoints
