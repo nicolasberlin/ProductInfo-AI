@@ -15,8 +15,8 @@ assert fetch_text is not None, "fetch_text introuvable : place-le dans agent/pre
 # ---------------------------------------------------------------------
 # Config & device
 # ---------------------------------------------------------------------
-BASE = "Qwen/Qwen2.5-3B-Instruct"   # modèle de base HF
-LORA = "out/qwen-2.5-3b-lora"              # dossier avec tes poids LoRA entraînés
+BASE = "Qwen/Qwen2.5-7B-Instruct"   # modèle de base HF
+LORA = "out/qwen-2.5-7b-lora"              # dossier avec tes poids LoRA entraînés
 
 use_cuda = torch.cuda.is_available()
 use_mps = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
