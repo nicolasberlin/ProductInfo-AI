@@ -28,9 +28,7 @@ out/qwen-2.5-3b-lora/
 offload/
 
 # Dossiers de sortie et checkpoints
-out/
 runs/
-checkpoints/
 
 # Logs et fichiers lourds
 *.log
