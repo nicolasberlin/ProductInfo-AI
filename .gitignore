@@ -20,7 +20,11 @@ Thumbs.db
 data/
 
 # Modèles et poids
-
+*.bin
+*.pt
+*.ckpt
+*.safetensors
+out/
 offload/
 
 # Dossiers de sortie et checkpoints
