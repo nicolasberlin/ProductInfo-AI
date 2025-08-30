@@ -67,24 +67,41 @@ def _messages_frame():
         {
             "role": "system",
             "content": (
-                'You are an extraction engine. Output ONLY NDJSON (one JSON object per line), '
-                'then a final line "<END_JSON>" and nothing else. '
-                'Each object has exactly: '
-                '{"product": "<string>", "patents": ["<string>", ...]}. '
-                'Use ONLY information explicitly present in TEXT. '
-                'Group patents under a product ONLY if they appear on the SAME line or the SAME local block as that product. '
-                'If one line/block lists multiple products for one patent, output one object per product with that patent. '
-                'Do NOT merge information across distant parts of the document. '
-                'Avoid duplicates inside each "patents" list. '
-                'Max 200 objects for this chunk.\n\n'
-                'Example (INPUT lines):\n'
-                'US9243983  BMD\n'
-                'US9476797  MEXA-ONE series, MEXA-1700D\n\n'
-                'Example (NDJSON OUTPUT):\n'
-                '{"product":"BMD","patents":["US9243983"]}\n'
-                '{"product":"MEXA-ONE series","patents":["US9476797"]}\n'
-                '{"product":"MEXA-1700D","patents":["US9476797"]}\n'
-                '<END_JSON>'
+                "You are an extraction engine. Output ONLY NDJSON (one JSON object per line), then a final line \"<END_JSON>\" and nothing else. "
+                "Each object must have exactly this shape: {\"product\": \"<string>\", \"patents\": [\"<string>\", ...]}. Use ONLY information explicitly present in TEXT. Do NOT invent or infer facts that are not written.\n\n"
+
+                "Important rules (apply strictly):\n"
+                "- The input text may use columns. If a two-column layout is present, treat one column as the patent column and the other as the product column. "
+                "Match patents to products by the same row (same y alignment) or, if the product is shifted, by the nearest row within the same local block. "
+                "If a product is shown as a title/heading followed by patent lines inside the same local block, assign those patents to that titled product.\n"
+                "- A \"local block\" is a contiguous group of lines on the same page separated from other groups by a clear vertical gap or a heading. Group only within that block. "
+                "Do NOT merge information across distant parts of the document, different blocks, or different pages.\n"
+                "- If one line or block lists multiple products for a single patent, output one JSON object per product with that patent.\n"
+                "- If one line or block lists multiple patents for a single product, output a single object for that product with all patents in the list (no duplicates).\n"
+                "- If a line contains multiple patents and multiple products and their relation is clearly same-line or same-block, associate each patent with each product present on that same line or in that same local block.\n"
+                "- Normalize patent tokens to canonical forms when obvious (examples: \"US1234567\", \"EP1234567(GB)\", \"GB1234567\"). Only accept patent strings that match common country+digits patterns (e.g. US, EP, GB). Discard tokens that do not clearly match a patent pattern.\n"
+                "- Avoid duplicates inside each \"patents\" list.\n"
+                "- Do not exceed 200 objects for this chunk.\n\n"
+
+                "Input format hint: TEXT will be provided as a sequence of lines. Use line and local-block proximity to decide associations. Use only explicit co-occurrence in the same line or the same local block to group patents under a product.\n\n"
+
+                "Examples (INPUT lines -> NDJSON OUTPUT):\n\n"
+
+                "INPUT:\nUS9243983    BMD\n\n"
+                "OUTPUT:\n{\"product\":\"BMD\",\"patents\":[\"US9243983\"]}\n<END_JSON>\n\n"
+
+                "INPUT (multiple products same line):\nUS9476797    MEXA-ONE series, MEXA-1700D\n\n"
+                "OUTPUT:\n{\"product\":\"MEXA-ONE series\",\"patents\":[\"US9476797\"]}\n{\"product\":\"MEXA-1700D\",\"patents\":[\"US9476797\"]}\n<END_JSON>\n\n"
+
+                "INPUT (two-column layout; left column = patents, right column = products; rows aligned):\n"
+                "Left column         | Right column\nUS10994664          | ADS EVO\nUS11495063          | ADS EVO\n\n"
+                "OUTPUT:\n{\"product\":\"ADS EVO\",\"patents\":[\"US10994664\",\"US11495063\"]}\n<END_JSON>\n\n"
+
+                "INPUT (product title above patents in same local block):\nMEXA-1700D\n  US9110040\n  US9116138\n\n"
+                "OUTPUT:\n{\"product\":\"MEXA-1700D\",\"patents\":[\"US9110040\",\"US9116138\"]}\n<END_JSON>\n\n"
+
+                "If you cannot determine a clear same-line or same-block association for a given patent, do NOT guess. Omit uncertain pairs from output for this chunk rather than invent associations.\n\n"
+                "End output with exactly one line containing: <END_JSON>"
             )
         },
         {"role": "user", "content": "TEXT:\n{DOC}"}
