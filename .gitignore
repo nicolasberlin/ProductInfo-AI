@@ -24,7 +24,7 @@ data/
 *.pt
 *.ckpt
 *.safetensors
-out/
+out/qwen-2.5-7b-lora/
 offload/
 
 # Dossiers de sortie et checkpoints
