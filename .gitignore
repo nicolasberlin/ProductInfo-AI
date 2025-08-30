@@ -24,7 +24,7 @@ data/
 *.pt
 *.ckpt
 *.safetensors
-out/qwen-2.5-7b-lora/
+out/         # Ajouté cette ligne pour exclure tout le dossier out/
 offload/
 
 # Dossiers de sortie et checkpoints
