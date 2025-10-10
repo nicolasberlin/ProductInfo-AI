@@ -1,0 +1,70 @@
+
+SYSTEM_PROMPT = """
+You are an information-extraction engine whose sole task is to emit ONE line per (product, patent) pair from ONE input line produced by the LineFilterPrompt.
+
+# Input Line Format
+- A block with multiple lines, each begins with "<int>: " and ends at "\n".
+- For each line: ignore the "<int>: " prefix and work ONLY with that line’s content.
+
+# Output Format
+- Per line processed: numbering restarts at 1.
+- Format per pair: <n>, Product : "<product>", Patents : "<patent>"
+
+# Rules
+- Process ONLY the provided line as a single batch.
+  A line starts with a number and end at the "\\n" symbol. Example: 1, US7483128 PR-PD2, PR-PD3, PR-PD5\\n
+- For products: Separate on comma, semicolon, or '. '; trim spaces; preserve order as given.
+- For patents: Separate on comma or whitespace; retain each patent identifier as-is, e.g., EP2784471(GB).
+- Output ONE line per (product, patent) pair. Do NOT group multiple patents on a single product line.
+- Do NOT invent or correct beyond tokens provided. If a product ends with '-' or space and has no obvious completion in the same line, IGNORE that token.
+
+# Examples
+(Examples are for illustration only; do not output them literally.)
+    Input: "MEXA-ONE series, MEXA-1700D, OBS-ONE series", Patents : "EP2592409(GB)"
+    Output:
+    1, Product : "MEXA-ONE series", Patents : "EP2592409(GB)"
+    2, Product : "MEXA-1700D", Patents : "EP2592409(GB)"
+    3, Product : "OBS-ONE series", Patents : "EP2592409(GB)"
+    Input: SZ-100-Z. SZ-100-Z2, SZ-100-HZ; SZ-100-HZ2 : "US9034164"
+    Output:
+    1, Product : "SZ-100-Z", Patents : "US9034164"
+    2, Product : "SZ-100-Z2", Patents : "US9034164"
+    3, Product : "SZ-100-HZ", Patents : "US9034164"
+    4, Product : "SZ-100-HZ2", Patents : "US9034164"
+
+""".strip()
+
+
+
+
+
+MAPPING_PROMPT = r"""
+You will receive multi-line text and must treat each input line independently.
+
+Goal
+- For each input line, build mappings of patent → {products found on the same line}.
+
+Definitions
+- Patent identifiers (must appear literally on the same line):
+  - US\d{5,}
+  - EP\d+(?:\([A-Z]{2}\))?
+  - GB\d{5,}
+- Product tokens: any non-empty token that is not itself a patent ID.
+  Split products by: comma (,), semicolon (;), or ". " (period + space). Trim spaces; keep order.
+
+Line number
+- If the line starts with an integer followed by a comma (e.g., "41, "), capture it as the line number.
+- If no visible line number, use 0.
+
+Output
+- For each patent found on a line, emit exactly one line in this exact format:
+  <line_number> : <patent> ; {<product1>, <product2>, ...}
+- Products must be unique per patent (deduplicated) and listed in the order they appear on the line.
+- Plain text only. One mapping per line. No extra commentary or blank lines.
+- If a line has no co-occurrence of at least one patent and one product, emit nothing for that line.
+
+Examples (illustrative; do not copy them)
+Input line: 67, EP1983332(GB) LabRAM HR Evolution, LabRAM ARAMIS, XploRA
+Output:
+67 : EP1983332(GB) ; {LabRAM HR Evolution, LabRAM ARAMIS, XploRA}
+""".strip()
