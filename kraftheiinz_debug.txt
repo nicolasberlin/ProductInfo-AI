@@ -1,0 +1,15 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.11, pytest-8.4.2, pluggy-1.6.0 -- /Users/nicolasandreasberlin/ProductInfo-AI/venv/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /Users/nicolasandreasberlin/ProductInfo-AI
+configfile: pytest.ini
+plugins: anyio-4.9.0, xdist-3.8.0
+created: 12/12 workers
+12 workers [1 item]
+
+scheduling tests via LoadScheduling
+
+test/test_llm_patent_gold.py::test_llm_patent_coverage_all_gold[kraftheinz_seed_2024] 
+[gw0] PASSED test/test_llm_patent_gold.py::test_llm_patent_coverage_all_gold[kraftheinz_seed_2024] 
+
+============================== 1 passed in 44.63s ==============================

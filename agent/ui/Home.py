@@ -1,13 +1,16 @@
 # pip install PyQt6
 import sys
-from agent import llm_inference
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFontDatabase, QFont, QAction, QTextCursor
+import asyncio
+from qasync import QEventLoop, asyncSlot
+from agent.llm_inference import llm_inference
+from PyQt6.QtGui import QFontDatabase, QAction, QTextCursor
+
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QPlainTextEdit, QLabel, QFileDialog, QMessageBox, QLineEdit,
     QSizePolicy, QProgressBar
 )
+
 
 class ChatUI(QWidget):
     def __init__(self):
@@ -119,25 +122,19 @@ class ChatUI(QWidget):
         busy_row.addWidget(self.busy)
         layout.addLayout(busy_row)
 
-                # Entrée libre pour parler directement à OpenAI
-        bottom = QHBoxLayout()
-        self.free_input = QLineEdit()
-        self.free_input.setPlaceholderText("Écris directement ta question…")
-        self.free_input.returnPressed.connect(self.send_free_text)
-        bottom.addWidget(self.free_input)
-
-        self.free_send = QPushButton("➤")
-        self.free_send.setToolTip("Envoyer le message libre")
-        self.free_send.clicked.connect(self.send_free_text)
-        bottom.addWidget(self.free_send)
-
-        layout.addLayout(bottom)
-
     def _short(self, s: str, n: int = 80) -> str:
         if len(s) <= n:
             return s
         head, tail = s[: int(n * 0.2)], s[-int(n * 0.75) :]
         return head + "…" + tail
+
+    def _set_busy(self, on: bool, msg: str = ""):
+        self.busy.setVisible(on)
+        self.send_button.setDisabled(on)
+        self.btn_open_pdf.setDisabled(on)
+        self.url_input.setDisabled(on)
+        if msg:
+            self.status_label.setText(msg)
 
     def validate_source(self):
         txt = self.url_input.text().strip()
@@ -156,49 +153,6 @@ class ChatUI(QWidget):
             return
         QMessageBox.warning(self, "Source invalide", "Colle une URL http(s) ou un chemin PDF existant.")
         
-    def send_free_text(self):
-        text = self.free_input.text().strip()
-        if not text:
-            return
-        # Busy ON
-        self.busy.setVisible(True)
-        self.send_button.setDisabled(True)
-        self.btn_open_pdf.setDisabled(True)
-        self.free_send.setDisabled(True)
-        self.url_input.setDisabled(True)
-        self.free_input.setDisabled(True)
-        self.status_label.setText("Envoi…")
-
-        try:
-            # log exact input to terminal (blue) so you can verify what is sent
-            BLUE = "\x1b[34m"
-            GREEN = "\x1b[32m"
-            RESET = "\x1b[0m"
-            import sys as _sys
-            _sys.stderr.write(f"{BLUE}[UI free] Sending (repr): {repr(text)[:2000]}{RESET}\n")
-
-            # Afficher la requête puis la réponse
-            self.output.appendPlainText(f"Vous: {text}")
-            self.free_input.clear()
-            answer = llm_inference.ask_user(text)
-
-            # log response (green)
-            _sys.stderr.write(f"{GREEN}[UI free] Received (preview): {repr(answer)[:1000]}{RESET}\n")
-
-            self.output.appendPlainText(f"Assistant: {answer or '[réponse vide]'}")
-            self.status_label.setText("Réponse reçue")
-        except Exception as e:
-            self.output.appendPlainText(f"[Erreur libre] {str(e)}")
-            self.status_label.setText("Erreur lors de l'appel libre")
-        finally:
-            # Busy OFF
-            self.busy.setVisible(False)
-            self.send_button.setDisabled(False)
-            self.btn_open_pdf.setDisabled(False)
-            self.free_send.setDisabled(False)
-            self.url_input.setDisabled(False)
-            self.free_input.setDisabled(False)
-
     def open_pdf(self):
         path, _ = QFileDialog.getOpenFileName(self, "Choisir un PDF", "", "PDF (*.pdf)")
         if not path:
@@ -207,7 +161,8 @@ class ChatUI(QWidget):
         self.source_label.setText(f"PDF sélectionné: {self._short(path)}")
         self.status_label.setText("<font color='green'>Prêt à envoyer</font>")
 
-    def send_to_openai(self):
+    @asyncSlot(bool)
+    async def send_to_openai(self, checked: bool | None = False):
         source = self.full_source or self.url_input.text().strip()
         if not source:
             QMessageBox.warning(self, "Aucune source", "Colle une URL ou importe un PDF.")
@@ -218,13 +173,14 @@ class ChatUI(QWidget):
         self.output.moveCursor(QTextCursor.MoveOperation.End)
         self.source_label.setText(f"Source: {self._short(source)}")
         # Busy on
-        self.busy.setVisible(True)
-        self.send_button.setDisabled(True)
-        self.btn_open_pdf.setDisabled(True)
-        self.url_input.setDisabled(True)
-        self.status_label.setText("Envoi…")
+        self._set_busy(True, "Envoi…")
         try:
-            answer = llm_inference.analyse_url(source)
+            # Supporte analyse_url sync ou async selon implémentation
+            if hasattr(llm_inference, "analyse_url") and asyncio.iscoroutinefunction(llm_inference.analyse_url):
+                answer = await llm_inference.analyse_url(source)
+            else:
+                answer = await asyncio.to_thread(llm_inference.analyse_url, source)
+
             self.output.setPlainText(answer or "[réponse vide]")
             self.output.moveCursor(QTextCursor.MoveOperation.End)
             self.status_label.setText("Réponse reçue")
@@ -234,14 +190,14 @@ class ChatUI(QWidget):
             self.status_label.setText("Erreur lors de l'appel à infer_gpt")
         finally:
             # Busy off
-            self.busy.setVisible(False)
-            self.send_button.setDisabled(False)
-            self.btn_open_pdf.setDisabled(False)
-            self.url_input.setDisabled(False)
+            self._set_busy(False)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    loop = QEventLoop(app)
+    asyncio.set_event_loop(loop)
     w = ChatUI()
     w.show()
-    sys.exit(app.exec())
+    with loop:
+        loop.run_forever()
