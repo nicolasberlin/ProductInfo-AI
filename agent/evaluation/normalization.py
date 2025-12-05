@@ -163,6 +163,8 @@ def _select_best_ucid_cached(num: str, country: str) -> str | None:
 def normalize_pat(p: Union[Dict[str, Any], str, int, float]) -> str:
     """
     Normalise un identifiant de brevet (dict ou str) en UCID ou candidat nettoyé.
+    Gère explicitement le cas des design patents US (USD + numéro) quand
+    on dispose d'un dict avec kind="design" et country="US".
     """
     if isinstance(p, dict):
         raw = (
@@ -181,6 +183,28 @@ def normalize_pat(p: Union[Dict[str, Any], str, int, float]) -> str:
         return ""
 
     country = explicit_country or inferred or ""
+
+    # Correction ciblée pour les design patents US
+    if isinstance(p, dict):
+        kind = (p.get("kind") or "").lower()
+        if kind == "design" and country == "US":
+            c = str(candidate).upper()
+            digits = "".join(ch for ch in c if ch.isdigit())
+            if digits:
+                # quelques formes simples à corriger :
+                # "851269"      -> "USD851269"
+                # "US851269"    -> "USD851269"
+                # "D851269"     -> "USD851269"
+                # "USD851269"   -> déjà bon
+                if re.fullmatch(r"USD\d+", c):
+                    candidate = c
+                elif (
+                    re.fullmatch(r"\d+", c)
+                    or re.fullmatch(r"US\d+", c)
+                    or re.fullmatch(r"D\d+", c)
+                ):
+                    candidate = f"USD{digits}"
+                # sinon on ne touche pas (forme plus exotique, on laisse le resolver gérer)
 
     ucid = _select_best_ucid_cached(candidate, country.lower())
     return ucid or candidate
