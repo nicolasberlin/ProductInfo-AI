@@ -134,6 +134,21 @@ playwright install chromium
 
 ---
 
+## Configure OpenAI API key
+
+Set `OPENAI_API_KEY` before running the CLI or UI:
+
+```bash
+# one-time in the shell
+export OPENAI_API_KEY="sk-..."
+
+# or keep it locally (not committed), then source it
+cp .env.example .env
+source .env
+```
+
+---
+
 ## UI
 
 A simple user interface is available (PyQt6) to run the pipeline on a URL/PDF and view both the NDJSON output and the logs.

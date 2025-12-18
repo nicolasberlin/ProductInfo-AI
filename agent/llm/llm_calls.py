@@ -1,6 +1,5 @@
-from openai import AsyncOpenAI
 import os
-import sys
+from openai import AsyncOpenAI
 from agent.llm.llm_prompts import (
     mapping_products_patents_prompt,
     patent_token_json_extraction_prompt,
@@ -10,9 +9,9 @@ from agent.llm.llm_prompts import (
     products_patents_audit_prompt,
 )
 
-api_key = "REMOVED_OPENAI_KEY7inQAzSlDtsi2FRWMM2MZYgRKW56smLFmEiuvgRSbW1fsKYcyJHcP2OfSJtQugqrtQp_5uiGmiT3BlbkFJPbd0Q48pdAUwQhpKrR5dAq4UTp_fj7qNDpmQeIrhII0_U3Ox6noMdEBt3agN0JNuzHifgOerEA"
+api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
-    print("[ERROR] OPENAI_API_KEY manquant (export OPENAI_API_KEY=...)", file=sys.stderr)
+    raise RuntimeError("OPENAI_API_KEY manquant (exporte OPENAI_API_KEY=... avant de lancer la commande)")
 client = AsyncOpenAI(api_key=api_key)
 
 async def call_openai(message):
