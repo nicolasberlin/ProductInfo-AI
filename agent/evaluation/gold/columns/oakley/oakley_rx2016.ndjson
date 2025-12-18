@@ -1,45 +1,45 @@
-{"product": "Junkyard II", "patent": "US711958A"}
-{"product": "Yarddog II", "patent": "US711958A"}
-{"product": "Airdrop", "patent": "US754244A"}
-{"product": "Bucket", "patent": "US662124A"}
-{"product": "Catapult", "patent": "US721128A"}
-{"product": "Chamfer", "patent": "US720799A"}
-{"product": "Chamfer 2", "patent": "US720799A"}
-{"product": "Conductor", "patent": "US748190A"}
-{"product": "Conductor 0.5", "patent": "US748190A"}
-{"product": "Crosslink", "patent": "US9122078B2"}
-{"product": "Crosslink", "patent": "US675666A"}
-{"product": "Crosslink", "patent": "US710434A"}
-{"product": "Crosslink Pitch", "patent": "US9122078B2"}
-{"product": "Crosslink Pitch", "patent": "US740880A"}
-{"product": "Crosslink Strike", "patent": "US9122078B2"}
-{"product": "Crosslink Strike", "patent": "US729866A"}
-{"product": "Crosslink Strike", "patent": "US747762A"}
-{"product": "Crosslink Switch", "patent": "US9122078B2"}
-{"product": "Crosslink Switch", "patent": "US710434A"}
-{"product": "Currency", "patent": "US662967A"}
-{"product": "Currency", "patent": "US676480A"}
-{"product": "Hollowpoint", "patent": "US711962A"}
-{"product": "Hollowpoint", "patent": "US8875346B2"}
-{"product": "Hollowpoint 0.5", "patent": "US711962A"}
-{"product": "Hollowpoint 0.5", "patent": "US8875346B2"}
-{"product": "Junkyard", "patent": "US711958A"}
-{"product": "Madman", "patent": "US721128A"}
-{"product": "Marshall", "patent": "US737889A"}
-{"product": "Milestone", "patent": "US720800A"}
-{"product": "Oakley 31Thirteen", "patent": "US7182458B2"}
-{"product": "Oakley Evade", "patent": "US7182458B2"}
-{"product": "Overlord", "patent": "US662125A"}
-{"product": "Paperclip", "patent": "US662536A"}
-{"product": "RPM Squared", "patent": "US747402A"}
-{"product": "Rudder", "patent": "US703260A"}
-{"product": "TinCup", "patent": "US8875346B2"}
-{"product": "TinCup", "patent": "US745083A"}
-{"product": "TinCup 0.5", "patent": "US745083A"}
-{"product": "Tumbleweed", "patent": "US654947A"}
-{"product": "Wingfold", "patent": "US746369A"}
-{"product": "Wingfold 0.5", "patent": "US746369A"}
-{"product": "Voltage", "patent": "US728008A"}
-{"product": "Voltage", "patent": "US746365A"}
-{"product": "Yarddog", "patent": "US711958A"}
-{"product": "Pitchman", "patent": "US745083A"}
+{"product": "Junkyard II", "patent": "USD711958S1"}
+{"product": "Yarddog II", "patent": "USD711958A"}
+{"product": "Airdrop", "patent": "USD754244S1"}
+{"product": "Bucket", "patent": "USD662124S1"}
+{"product": "Catapult", "patent": "USD721128S1"}
+{"product": "Chamfer", "patent": "USD720799S1"}
+{"product": "Chamfer 2", "patent": "USD720799S1"}
+{"product": "Conductor", "patent": "USD748190A"}
+{"product": "Conductor 0.5", "patent": "USD748190A"}
+{"product": "Crosslink", "patent": "USD9122078B2"}
+{"product": "Crosslink", "patent": "USD675666S1"}
+{"product": "Crosslink", "patent": "USD710434A"}
+{"product": "Crosslink Pitch", "patent": "USD9122078B2"}
+{"product": "Crosslink Pitch", "patent": "USD740880A"}
+{"product": "Crosslink Strike", "patent": "USD9122078B2"}
+{"product": "Crosslink Strike", "patent": "USD729866S1"}
+{"product": "Crosslink Strike", "patent": "USD747762S1"}
+{"product": "Crosslink Switch", "patent": "USD9122078B2"}
+{"product": "Crosslink Switch", "patent": "USD710434A"}
+{"product": "Currency", "patent": "USD662967S1"}
+{"product": "Currency", "patent": "USD676480S1"}
+{"product": "Hollowpoint", "patent": "USD711962S1"}
+{"product": "Hollowpoint", "patent": "USD8875346B2"}
+{"product": "Hollowpoint 0.5", "patent": "USD711962A"}
+{"product": "Hollowpoint 0.5", "patent": "USD8875346B2"}
+{"product": "Junkyard", "patent": "USD711958A"}
+{"product": "Madman", "patent": "USD721128A"}
+{"product": "Marshall", "patent": "USD737889S1"}
+{"product": "Milestone", "patent": "USD720800S1"}
+{"product": "Oakley 31Thirteen", "patent": "USD7182458S1"}
+{"product": "Oakley Evade", "patent": "USD7182458S1"}
+{"product": "Overlord", "patent": "USD662125S1"}
+{"product": "Paperclip", "patent": "USD662536S1"}
+{"product": "RPM Squared", "patent": "USD747402S1"}
+{"product": "Rudder", "patent": "USD703260S1"}
+{"product": "TinCup", "patent": "USD8875346B2"}
+{"product": "TinCup", "patent": "USD745083S1"}
+{"product": "TinCup 0.5", "patent": "USD745083A"}
+{"product": "Tumbleweed", "patent": "USD654947S1"}
+{"product": "Wingfold", "patent": "USD746369A"}
+{"product": "Wingfold 0.5", "patent": "USD746369A"}
+{"product": "Voltage", "patent": "USD728008S1"}
+{"product": "Voltage", "patent": "USD746365S1"}
+{"product": "Yarddog", "patent": "USD711958S1"}
+{"product": "Pitchman", "patent": "USD745083A"}

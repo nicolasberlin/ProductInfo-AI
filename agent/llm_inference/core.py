@@ -18,9 +18,6 @@ from agent.llm_inference.modes import (
     analyse_url_columns,
 )
 
-USE_OCR = os.getenv("USE_OCR", "0") == "1"
-
-
 def log(msg: str):
     """Print uniforme sur stderr."""
     print(msg, file=sys.stderr, flush=True)
@@ -59,7 +56,7 @@ async def analyse_url(url: str, mode: str) -> str:
 # Analyse de plusieurs documents (batch)
 # ------------------------------------------------------------
 
-async def analyse_many_urls(urls: List[str], *, max_concurrency: int = 4, mode: str = "full") -> List[dict]:
+async def analyse_many_urls(urls: List[str], *, max_concurrency: int = 24, mode: str = "full") -> List[dict]:
     """
     Analyse plusieurs documents en parallèle.
     Chaque tâche est limitée par un sémaphore de max_concurrency.

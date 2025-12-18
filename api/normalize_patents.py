@@ -1,39 +1,46 @@
+#!/usr/bin/env python3
+"""
+CLI normalizing patents inside NDJSON input.
+
+Usage:
+    cat input.ndjson | python api/normalize_patents.py > output.ndjson
+
+Rules:
+    1) Local deterministic normalization (normalize_pat)
+    2) Optional enrichment via Google Patents API (select_best_ucid)
+"""
+
 import sys
 import json
 import re
 
-# Import relatif (même dossier) pour exécution directe: python api/normalize_patents.py
-from get_ucid import select_best_ucid
+from agent.evaluation.normalization import normalize_pat, PATENT_PATTERN as PATENT_RE
+from api.get_ucid import select_best_ucid
 
-# Ex: "US9439375B2" ou "US9949455"
-PATENT_RE = re.compile(r"^([A-Z]{2})(\d+)([A-Z]\d)?$")
 
 def normalize_patent(raw_patent: str) -> str:
     """
-    Prend une chaîne comme 'US9949455' ou 'US9439375B2'
-    -> retourne l'UCID normalisé (ex: 'US9949455B2') si possible,
-       sinon renvoie la chaîne d'origine.
+    Normalize + enrich a patent string:
+        - deterministic cleanup (normalize_pat)
+        - try resolving a full UCID using Google's API
+
+    If API fails → return the cleaned local form.
     """
-    raw = raw_patent.upper().replace(" ", "").strip()
+    base = normalize_pat(raw_patent)
 
-    raw = re.sub(r"\([^)]*\)", "", raw)
-
-    m = PATENT_RE.match(raw)
+    m = PATENT_RE.match(base)
     if not m:
-        # format bizarre -> on ne touche pas
-        return raw
+        return base
 
-    country, num, _kind = m.group(1), m.group(2), m.group(3)
+    country, num, _kind = m.group(1), m.group(2), m.group(3) or ""
 
-    # Appel à ton API Google Patents
-    candidate = f"{country}{num}"
+    try:
+        ucid = select_best_ucid(num, country)
+    except Exception:
+        return base
 
-    ucid = select_best_ucid(num, country)
+    return ucid if ucid else base
 
-  
-
-
-    return ucid if ucid else raw
 
 def main() -> int:
     for line in sys.stdin:
@@ -43,19 +50,21 @@ def main() -> int:
 
         obj = json.loads(line)
 
-        patent_raw = obj.get("patent", "")
-        if patent_raw:
-            obj["patent"] = normalize_patent(patent_raw)
-            # Affiche le mapping pour inspection (stderr pour ne pas polluer la sortie NDJSON)
+        raw = obj.get("patent", "")
+        if raw:
+            new_pat = normalize_patent(raw)
+            # Debug mapping printed on stderr (clean for pipelines)
             try:
-                print(f"[normalize] raw='{patent_raw}' -> '{obj['patent']}'", file=sys.stderr)
+                print(f"[normalize] raw='{raw}' -> '{new_pat}'", file=sys.stderr)
             except Exception:
                 pass
 
-        # On réimprime une ligne JSON propre
+            obj["patent"] = new_pat
+
         print(json.dumps(obj, ensure_ascii=False))
 
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

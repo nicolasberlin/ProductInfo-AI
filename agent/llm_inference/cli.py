@@ -1,9 +1,16 @@
 import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
 
 from agent.llm_inference.core import analyse_url
+from agent.llm_inference.essential import (
+    essentials_from_raw,
+    filename_from_url,
+    resolve_patents_with_api,
+    write_essential,
+)
 
 
 def _read_urls_from_file(path: Path) -> list[str]:
@@ -84,23 +91,52 @@ def main():
         help="URL directe, fichier .url ou dossier contenant des fichiers .url (répéter pour plusieurs valeurs).",
     )
     parser.add_argument("--mode", choices=["full", "audit", "patents", "products"], default="patents", help="Mode d’analyse.")
+    parser.add_argument("--ocr", choices=["on", "off"], default=None, help="Force l'usage OCR pour ce run (on/off).")
+    parser.add_argument(
+        "--write-essential",
+        action="store_true",
+        help="Écrit un NDJSON essentiel (produits/brevets) dans agent/evaluation/reports/essential.",
+    )
     args = parser.parse_args()
+
+    # Override global OCR usage if explicitly specified
+    if args.ocr == "on":
+        os.environ["USE_OCR"] = "1"
+    elif args.ocr == "off":
+        os.environ["USE_OCR"] = "0"
 
     targets = _collect_urls(args.url, args.inputs)
     if not targets:
         parser.error("Aucune URL fournie. Ajoute un argument positionnel ou un --input.")
+
+    # Log URL dans les messages START seulement en cas de batch
+    os.environ["LOG_URL_START"] = "1" if len(targets) > 1 else "0"
 
     async def _run():
         if len(targets) == 1:
             res = await analyse_url(targets[0], mode=args.mode)
             if res:
                 print(res)
+                if args.write_essential:
+                    products, patents = essentials_from_raw(res, args.mode)
+                    patents = resolve_patents_with_api(patents)
+                    out_dir = Path("agent") / "evaluation" / "reports"
+                    out_path = out_dir / filename_from_url(targets[0], ext=".essential.ndjson")
+                    write_essential(out_path, targets[0], products, patents)
+                    print(f"[ESSENTIAL] Écrit {out_path}", file=sys.stderr, flush=True)
         else:
             results = await asyncio.gather(*(analyse_url(u, mode=args.mode) for u in targets))
             for u, r in zip(targets, results):
                 if r:
                     print(f"# URL: {u}")
                     print(r)
+                    if args.write_essential:
+                        products, patents = essentials_from_raw(r, args.mode)
+                        patents = resolve_patents_with_api(patents)
+                        out_dir = Path("agent") / "evaluation" / "reports"
+                        out_path = out_dir / filename_from_url(u, ext=".essential.ndjson")
+                        write_essential(out_path, u, products, patents)
+                        print(f"[ESSENTIAL] Écrit {out_path}", file=sys.stderr, flush=True)
 
     asyncio.run(_run())
 

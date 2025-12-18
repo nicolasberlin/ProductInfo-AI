@@ -9,55 +9,72 @@ Detect all patent or patent-application numbers in the input text.
 For each detected token, output one JSON object with these keys:
 - "number_raw": token exactly as it appears (keep punctuation, spaces)
 - "country": 2-letter WIPO code (US, EP, CN, etc.); leave empty string if you cannot infer it
-- "kind": "design" if it starts with "D" and looks like a U.S. design patent (e.g. D847658 or USD847658), "utility" for standard patent/publication formats (e.g. WO2012/04545, US 2023/0187654), otherwise "unknown"
+- "kind": "design" if it is a U.S. design patent number (starts with "D" like D641785 or already contains "USD" like USD641785),
+          "utility" for standard patent/publication formats (e.g. WO2012/04545, US 2023/0187654),
+          otherwise "unknown"
 - "confidence": float in [0.0, 1.0] with up to three decimals; decrease below 0.7 when unsure
-- "normalized_number": uppercase patent identifier prefixed with the WIPO code (if known) and stripped of spaces/punctuation (e.g. US10507399). Use empty string if normalization fails.
+- "normalized_number": a canonical identifier with no spaces/punctuation (see rules). Use empty string if normalization fails.
 
 RULES
-- Match any plausible patent identifier (examples: US10507399, WO2012/04545, ZL201180013089.X, Canada 2,688,262).
+- Match any plausible patent identifier (examples: US10507399, WO2012/04545, ZL201180013089.X, Canada 2,688,262, D641785, USD641785).
 - Ignore phone numbers, dates, and prices.
 - Preserve text exactly for "number_raw".
 - Remove duplicates.
 - Keep "number_raw" unchanged even when you infer a country code. Apply inferred codes only to "country" and "normalized_number".
-- The patent must be associated with a WIPO country code (e.g., US, EP, CN). If missing but inferable from context (e.g., "United States Patent No. 9,754,465"), set "country" to the inferred code and prefix "normalized_number" with it.
 - If you cannot infer any country code, keep both "country" and "normalized_number" as empty strings rather than guessing.
-- Local code normalization:
-  - Convert ZL → CN (China)
-  - Convert E → ES (Spain)
-  - Convert UK → GB (United Kingdom)
-  - Keep all letters uppercase. Remove spaces, commas, periods, hyphens, parentheses.
-- When stripping punctuation, retain trailing letters that are part of the identifier (e.g. ZL201180013089.X → CN201180013089X).
-- Normalized format: always COUNTRYCODE + NUMBER without punctuation (e.g., CN2015800437105, ES10795846, US9473066).
-- Each "normalized_number" must represent exactly one identifier and match a single-country pattern (e.g., starts with one country code followed by digits/letters). If a token appears merged, segment by known patterns (country code boundaries, digit length, punctuation in number_raw).
-- For each patent, assign country origin based on the text : look first for a close mention of the country name or code near the patent number. If none, use the most likely country based on the text.
 
- 
-WIPO COUNTRY CODES :
-    Use these mappings when inferring the 2-letter code for the "country" field:
-    Canada → CA
-    China → CN
-    European Patent Convention / Europe → EP
-    France → FR
-    Germany → DE
-    Italy → IT
-    Japan → JP
-    Russia → RU
-    Spain → ES
-    United Kingdom → GB
-    United States → US
+LOCAL CODE NORMALIZATION (for country inference only)
+- Convert ZL → CN (China)
+- Convert E → ES (Spain)
+- Convert UK → GB (United Kingdom)
 
+CANONICAL NORMALIZED FORMAT
+- Remove spaces, commas, periods, hyphens, parentheses. Keep letters uppercase.
+- Utility patents/applications:
+    normalized_number = COUNTRYCODE + DIGITS (+ optional trailing letters that belong to the identifier)
+    Examples:
+      "US 9,473,066"        -> "US9473066"
+      "US 2023/0187654"     -> "US20230187654"
+      "ZL201180013089.X"    -> "CN201180013089X"
+      "EP 2435612"          -> "EP2435612"
+- U.S. DESIGN patents (critical rule):
+    If kind=="design" and the token is a U.S. design patent, normalized_number MUST start with "USD" (NOT "US").
+    Examples:
+      "D641785"             -> country="US", kind="design", normalized_number="USD641785"
+      "US D641,785"         -> country="US", kind="design", normalized_number="USD641785"
+      "USD641785"           -> country="US", kind="design", normalized_number="USD641785"
+
+VALIDATION
+- Each "normalized_number" must represent exactly one identifier and match a single-country pattern.
+- If a token appears merged, segment by known patterns (country code boundaries, digit groups, punctuation in number_raw).
+- If normalization fails, output normalized_number="" and reduce confidence.
+
+WIPO COUNTRY CODES (for "country")
+Canada → CA
+China → CN
+European Patent Convention / Europe → EP
+France → FR
+Germany → DE
+Italy → IT
+Japan → JP
+Russia → RU
+Spain → ES
+United Kingdom → GB
+United States → US
 
 EXAMPLE INPUT
 Trima™ systems
-United States 10507399, Canada 2,688,262, JP 6031234, EP 2435612
+United States 10507399, Canada 2,688,262, JP 6031234, EP 2435612, D641785, USD921754
 
 EXPECTED OUTPUT
 {"number_raw": "United States 10507399", "country": "US", "kind": "utility", "confidence": 1.0, "normalized_number": "US10507399"}
 {"number_raw": "Canada 2,688,262", "country": "CA", "kind": "utility", "confidence": 1.0, "normalized_number": "CA2688262"}
 {"number_raw": "JP 6031234", "country": "JP", "kind": "utility", "confidence": 1.0, "normalized_number": "JP6031234"}
 {"number_raw": "EP 2435612", "country": "EP", "kind": "utility", "confidence": 1.0, "normalized_number": "EP2435612"}
-"""
+{"number_raw": "D641785", "country": "US", "kind": "design", "confidence": 1.0, "normalized_number": "USD641785"}
+{"number_raw": "USD921754", "country": "US", "kind": "design", "confidence": 1.0, "normalized_number": "USD921754"}
 
+"""
 
 
 PRODUCT_NAME_EXTRACTION = """
@@ -135,14 +152,12 @@ You will group mapping lines by product name.
 - JSON Lines (one object per line) where each object has keys:
     - "product_name"
     - "patent_number"
-    - optional "source"
 
 # TASK
 - Group all lines by product_name.
 - For each product, output a single JSON object with:
     - "product_name": the exact product name as it appears most frequently (choose any if tie)
     - "patents": array of unique patent numbers (strings), sorted ascending lexicographically
-    - "sources": optional array of unique sources if provided in input (omit if none)
 
 # RULES
 - Output JSON Lines (NDJSON), one product per line.

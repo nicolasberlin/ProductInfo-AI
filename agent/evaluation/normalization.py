@@ -1,213 +1,173 @@
+"""
+Patent normalization utilities for ProductInfo-AI.
+
+This module provides:
+    - normalize_pat : deterministic UCID-like cleanup
+    - canonicalize_for_eval : evaluation-only canonicalization
+"""
+
+from __future__ import annotations
 import re
-import unicodedata
-from functools import lru_cache
-from typing import Tuple, Union, Dict, Any
-
-from api.get_ucid import select_best_ucid
-
-KNOWN_CODES = {
-    "US","CA","CN","EP","FR","DE","IT","JP","RU","ES","GB","UK","WO","KR","AU",
-    "BR","IN","MX","TW","SG","HK","NL","BE","CH","AT","PT","SE","DK","FI","NO",
-    "IE","IL","NZ","ZA","PL","CZ","HU","TR","AR","CL","CO","PE","PH","TH","ID",
-    "VN","AE","SA","QA","KW","UA","SI","SK","RO","BG","GR","LU","MC","LI",
-}
-
-COUNTRY_KEYWORDS = [
-    ("UNITED STATES", "US"),
-    ("U.S.", "US"),
-    ("USA", "US"),
-    ("UNITED KINGDOM", "GB"),
-    ("GREAT BRITAIN", "GB"),
-    ("ENGLAND", "GB"),
-    ("CANADA", "CA"),
-    ("FRANCE", "FR"),
-    ("GERMANY", "DE"),
-    ("DEUTSCHLAND", "DE"),
-    ("JAPAN", "JP"),
-    ("CHINA", "CN"),
-    ("KOREA", "KR"),
-    ("REPUBLIC OF KOREA", "KR"),
-    ("SOUTH KOREA", "KR"),
-    ("RUSSIA", "RU"),
-    ("RUSSIAN FEDERATION", "RU"),
-    ("SPAIN", "ES"),
-    ("ITALY", "IT"),
-    ("EUROPEAN PATENT", "EP"),
-    ("EUROPEAN", "EP"),
-    ("AUSTRALIA", "AU"),
-    ("BRAZIL", "BR"),
-    ("MEXICO", "MX"),
-    ("INDIA", "IN"),
-]
-
-PATENT_PATTERN = re.compile(
-    r"\b([A-Z]{2,3})([A-Z])?[-\s/]*((?:\d[\d\s,./-]*)\d)(?:\s*[A-Z]\d?)?",
-    flags=re.IGNORECASE,
-)
-
-PRODUCT_KEYS = (
-    "normalized_product",
-    "normalized_name",
-    "product",
-    "product_name",
-    "productName",
-    "name",
-    "title",
-    "value",
-    "label",
-)
 
 
-def normalize_text(s: str) -> str:
-    s = s.lower()
-    s = re.sub(r"[^a-z0-9 ]", " ", s)
-    s = re.sub(r"\s+", " ", s).strip()
+# ----------------------------------------------------------------------
+# Regex simple : CC + digits (+ optional kind like B2, A1, S1…)
+# Exemple : US9439375B2, EP1106985, CN2006800266812
+# ----------------------------------------------------------------------
+PATENT_RE = re.compile(r"^([A-Z]{2})(\d+)([A-Z]\d?)?$")
+USD_RE = re.compile(r"^USD(\d+)([A-Z]\d?)?$")
+
+
+# ----------------------------------------------------------------------
+# Nettoyage minimal et déterministe
+# ----------------------------------------------------------------------
+def _sanitize_raw(raw: str) -> str:
+    """
+    Clean a raw patent string into a compact uppercase form:
+    - remove parentheses
+    - remove any non-alphanumeric chars
+    - uppercase letters
+    """
+    if not raw:
+        return ""
+    s = raw.upper().strip()
+
+    # Remove text inside parentheses
+    s = re.sub(r"\([^)]*\)", "", s)
+
+    # Keep only alphanumerics (removes spaces, hyphens, slashes, commas…)
+    s = re.sub(r"[^A-Z0-9]", "", s)
     return s
 
 
-def _stringify_list(values) -> str:
-    return " ".join(str(v or "").strip() for v in values if v)
-
-
-def _extract_product_text(prod: Union[str, Dict[str, Any], list, tuple, None]) -> str:
-    if prod is None:
-        return ""
-    if isinstance(prod, dict):
-        for key in PRODUCT_KEYS:
-            if key in prod and prod[key]:
-                val = prod[key]
-                if isinstance(val, (list, tuple, set)):
-                    return _stringify_list(val)
-                return str(val)
-    if isinstance(prod, (list, tuple, set)):
-        return _stringify_list(prod)
-    return str(prod)
-
-
-def normalize_prod(prod: Union[str, Dict[str, Any], list, tuple, None]) -> str:
+# ----------------------------------------------------------------------
+# Normalisation business principale
+# ----------------------------------------------------------------------
+def normalize_pat(raw: str) -> str:
     """
-    Normalise un nom de produit en supprimant la casse, les marques et les espaces superflus.
+    Deterministically normalize a patent string to a UCID-like format.
+
+    Rules:
+        - clean the input (remove noise)
+        - detect CC + number + optional kind
+        - convert Chinese ZL → CN
+        - output "CC<number><kind>" or the cleaned string if unrecognized
+
+    Examples:
+        "US 9,439,375 B2"   → "US9439375B2"
+        "ZL200680026681.2"  → "CN2006800266812"
+        "EP1106985"         → "EP1106985"
     """
-    raw = _extract_product_text(prod)
     if not raw:
         return ""
-    cleaned = raw.replace("™", " ").replace("®", " ").replace("©", " ")
-    text = unicodedata.normalize("NFKC", cleaned)
-    text = text.replace("&", " and ")
-    text = re.sub(r"[^0-9A-Za-z ]+", " ", text)
-    normalized = normalize_text(text)
-    tokens = [tok for tok in normalized.split() if tok not in {"tm", "r", "c"}]
-    return " ".join(tokens)
-
-
-def _fix_code(code: str | None) -> str:
-    if not code:
-        return ""
-    return "GB" if code.upper() == "UK" else code.upper()
-
-
-def _extract_country_from_text(text: str) -> str:
-    up = text.upper()
-    for match in re.finditer(r"\b([A-Z]{2,3})\s*[-/ ]*\d", up):
-        cand = _fix_code(match.group(1))
-        if cand in KNOWN_CODES:
-            return cand
-    for keyword, code in COUNTRY_KEYWORDS:
-        if keyword in up:
-            return code
-    return ""
-
-
-def _extract_patent_hint(p: str) -> Tuple[str, str]:
-    s = unicodedata.normalize("NFKC", str(p or "")).upper().strip()
+    if isinstance(raw, dict):
+        # try the common keys the LLM returns
+        raw = (
+            raw.get("normalized_number")
+            or raw.get("patent")
+            or raw.get("patent_number")
+            or raw.get("patentNumber")
+            or raw.get("number_raw")
+            or ""
+        )
+    s = _sanitize_raw(raw)
     if not s:
-        return "", ""
+        return s
 
-    # try main regex
-    match = PATENT_PATTERN.search(s)
-    if match:
-        code = _fix_code(match.group(1))
-        design = (match.group(2) or "").upper()
-        digits = "".join(ch for ch in match.group(3) if ch.isdigit())
-        candidate = f"{code}{design}{digits}" if code else f"{design}{digits}"
-        return candidate, code
+    m = PATENT_RE.match(s)
+    if not m:
+        # Unknown shape → return deterministic cleaned value
+        return s
 
-    # fallback digits only
-    digits = "".join(re.findall(r"\d+", s))
+    country, num, kind = m.group(1), m.group(2), m.group(3) or ""
+
+    # Normalize Chinese patents: ZLxxxxxx → CNxxxxxx
+    if country == "ZL":
+        country = "CN"
+
+    return f"{country}{num}{kind}"
+
+
+# ----------------------------------------------------------------------
+# Canonicalisation pour l'évaluation (expected vs predicted)
+# ----------------------------------------------------------------------
+def canonicalize_for_eval(ucid: str) -> str:
+    """
+    Canonical form of a UCID for evaluation purposes.
+
+    Rules:
+      - Base on normalize_pat()
+      - US design patents:
+            USD823786A   → USD823786
+            USD823786S1  → USD823786
+            US823786A    → USD823786  (6 digits or fewer)
+      - Other patents (utility, EP, JP, etc.) remain as-is.
+
+    This removes irrelevant suffix differences (A, S1) when comparing
+    expected vs predicted patents.
+    """
+    if not ucid:
+        return ucid
+
+    u = normalize_pat(ucid)
+    digits = "".join(ch for ch in u if ch.isdigit())
+
     if not digits:
-        return "", ""
+        return u
 
-    code = _extract_country_from_text(s)
-    candidate = f"{code}{digits}" if code else digits
-    return candidate, code
+    # Already a USD design patent → strip suffix
+    if u.startswith("USD"):
+        return f"USD{digits}"
 
+    # Some data encode US designs as "US<digits>A", "US<digits>"
+    if u.startswith("US") and 1 <= len(digits) <= 6:
+        return f"USD{digits}"
 
-def _pick_from_dict(data: Dict[str, Any], keys: tuple[str, ...], default: str = "") -> str:
-    for key in keys:
-        val = data.get(key)
-        if isinstance(val, (list, tuple)) and val:
-            return str(val[0])
-        if val:
-            return str(val)
-    return default
+    return u
 
 
-@lru_cache(maxsize=2048)
-def _select_best_ucid_cached(num: str, country: str) -> str | None:
-    try:
-        return select_best_ucid(num, country or "")
-    except Exception:
+def standard_pat_key(raw: str) -> str | None:
+    """
+    Return a standard comparison key, or None if not a plausible patent.
+
+    Examples:
+      US10277158B2 -> US10277158
+      CN107076464A -> CN107076464
+      US823786S1   -> USD823786
+      USD823786S1  -> USD823786
+      USD1004141   -> USD1004141
+      COMPMOUNT... -> None
+    """
+    if not raw:
         return None
 
+    s = _sanitize_raw(raw)
+    if not s:
+        return None
 
-def normalize_pat(p: Union[Dict[str, Any], str, int, float]) -> str:
-    """
-    Normalise un identifiant de brevet (dict ou str) en UCID ou candidat nettoyé.
-    Gère explicitement le cas des design patents US (USD + numéro) quand
-    on dispose d'un dict avec kind="design" et country="US".
-    """
-    if isinstance(p, dict):
-        raw = (
-            p.get("number_raw")
-            or p.get("normalized_number")
-            or p.get("value_raw")
-            or _pick_from_dict(p, ("patent", "patent_number", "patentNumber", "value"), "")
-        )
-        explicit_country = (p.get("country", "") or "").upper()
-    else:
-        raw = str(p or "")
-        explicit_country = ""
+    # 1) USD designs: USD<digits>(kind?) -> USD<digits>
+    m_usd = USD_RE.match(s)
+    if m_usd:
+        num = m_usd.group(1)
+        return f"USD{num}"
 
-    candidate, inferred = _extract_patent_hint(raw)
-    if not candidate:
-        return ""
+    # 2) Normal CC<digits>(kind?)
+    m = PATENT_RE.match(s)
+    if not m:
+        return None  # filters OCR garbage
 
-    country = explicit_country or inferred or ""
+    country, num, kind = m.group(1), m.group(2), (m.group(3) or "")
 
-    # Correction ciblée pour les design patents US
-    if isinstance(p, dict):
-        kind = (p.get("kind") or "").lower()
-        if kind == "design" and country == "US":
-            c = str(candidate).upper()
-            digits = "".join(ch for ch in c if ch.isdigit())
-            if digits:
-                # quelques formes simples à corriger :
-                # "851269"      -> "USD851269"
-                # "US851269"    -> "USD851269"
-                # "D851269"     -> "USD851269"
-                # "USD851269"   -> déjà bon
-                if re.fullmatch(r"USD\d+", c):
-                    candidate = c
-                elif (
-                    re.fullmatch(r"\d+", c)
-                    or re.fullmatch(r"US\d+", c)
-                    or re.fullmatch(r"D\d+", c)
-                ):
-                    candidate = f"USD{digits}"
-                # sinon on ne touche pas (forme plus exotique, on laisse le resolver gérer)
-
-    ucid = _select_best_ucid_cached(candidate, country.lower())
-    return ucid or candidate
+    if country == "ZL":
+        country = "CN"
+        
+    # 4) Default: drop kind suffix
+    return f"{country}{num}"
 
 
-__all__ = ["normalize_prod", "normalize_pat"]
+__all__ = [
+    "normalize_pat",
+    "canonicalize_for_eval",
+    "standard_pat_key",
+    "PATENT_RE",
+]

@@ -8,6 +8,17 @@ from typing import List, Union
 
 import requests
 
+try:
+    from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+except Exception:  # pragma: no cover - optional dependency
+    async_playwright = None
+    PlaywrightTimeoutError = None
+
+try:
+    from PIL import Image
+except Exception:  # pragma: no cover - optional dependency
+    Image = None
+
 
 def log(msg: str):
     print(msg, file=sys.stderr, flush=True)
@@ -55,10 +66,68 @@ def _normalize_tesseract_lang(lang: str | None) -> str:
     return mapping.get(cleaned, cleaned)
 
 
+def _looks_like_pdf(target: str) -> bool:
+    """Heuristic to know if the target should be treated as PDF."""
+    if not target:
+        return False
+    lower = target.lower()
+    if lower.endswith(".pdf"):
+        return True
+    if lower.startswith("file://") and lower.endswith(".pdf"):
+        return True
+    if os.path.exists(target):
+        try:
+            with open(target, "rb") as f:
+                head = f.read(4)
+            return head.startswith(b"%PDF")
+        except OSError:
+            return False
+    return False
+
+
+async def _render_html_to_png(url: str, out_dir: str, wait_ms: int = 1500, timeout_ms: int = 60000) -> list[str]:
+    """
+    Render a HTML page (remote or local) to a PNG screenshot for OCR.
+    Requires playwright with a Chromium browser installed.
+    """
+    if async_playwright is None:
+        log("[OCR][HTML] playwright non installé; capture HTML ignorée.")
+        return []
+
+    target = url
+    if url.startswith("file://"):
+        target = url
+    elif os.path.exists(url):
+        target = Path(url).resolve().as_uri()
+
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page(viewport={"width": 1280, "height": 1800})
+            try:
+                await page.goto(target, wait_until="networkidle", timeout=timeout_ms)
+            except Exception as exc:
+                # Retry with a looser condition (domcontentloaded) on timeout only
+                if PlaywrightTimeoutError and isinstance(exc, PlaywrightTimeoutError):
+                    log(f"[OCR][HTML] networkidle timeout, retry domcontentloaded: {exc}")
+                    await page.goto(target, wait_until="domcontentloaded", timeout=timeout_ms)
+                else:
+                    raise
+            await page.wait_for_timeout(wait_ms)
+            out_path = Path(out_dir) / "html_ocr.png"
+            await page.screenshot(path=str(out_path), full_page=True)
+            await browser.close()
+    except Exception as exc:
+        log(f"[OCR][HTML] capture échouée: {exc}")
+        return []
+
+    return [str(out_path)]
+
+
 def _ocr_pdf_to_pages(pdf_path: str, lang: str = "en", **kwargs):
-    # Allow disabling OCR via environment flag for testing/performance.
-    if os.getenv("DISABLE_OCR") == "1":
-        log("[OCR] Disabled via DISABLE_OCR=1; skipping OCR.")
+    # Allow disabling OCR via USE_OCR for testing/performance.
+    if os.getenv("USE_OCR", "1") != "1":
+        log("[OCR] Disabled via USE_OCR=0; skipping OCR.")
         return []
     if convert_from_path is None:
         log("[OCR] pdf2image is not installed; skipping OCR.")
@@ -92,6 +161,28 @@ def _ocr_pdf_to_pages(pdf_path: str, lang: str = "en", **kwargs):
                 snippet = snippet[:300] + " …"
             print(f"[OCR][{i}] {snippet}", file=sys.stderr)
 
+    return pages
+
+
+def _ocr_images_to_pages(image_paths: list[str], lang: str = "en") -> list[str]:
+    """OCR on one or more PNG/JPG images (used for HTML screenshots)."""
+    if os.getenv("USE_OCR", "1") != "1":
+        log("[OCR] Disabled via USE_OCR=0; skipping OCR.")
+        return []
+    if pytesseract is None or Image is None:
+        log("[OCR] pytesseract ou Pillow manquant; capture HTML ignorée.")
+        return []
+
+    lang_code = _normalize_tesseract_lang(lang)
+    pages: list[str] = []
+    for img_path in image_paths:
+        try:
+            with Image.open(img_path) as img:
+                text = pytesseract.image_to_string(img, lang=lang_code)
+        except Exception as exc:
+            log(f"[OCR] erreur sur l'image {img_path}: {exc}")
+            continue
+        pages.append((text or "").strip())
     return pages
 
 
