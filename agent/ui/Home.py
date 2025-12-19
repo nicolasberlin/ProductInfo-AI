@@ -27,18 +27,24 @@ from PyQt6.QtWidgets import (
 
 # Import analyse_url with fallback when running this file directly
 try:
-    from agent.llm_inference.core import analyse_url
+    from agent.application.llm_inference.core import analyse_url
+    from agent.application.llm_inference.essential import (
+        essentials_from_raw,
+        filename_from_url,
+        resolve_patents_with_api,
+        write_essential,
+    )
 except ModuleNotFoundError:
     ROOT = Path(__file__).resolve().parents[2]
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
-from agent.llm_inference.core import analyse_url
-from agent.llm_inference.essential import (
-    essentials_from_raw,
-    filename_from_url,
-    resolve_patents_with_api,
-    write_essential,
-)
+    from agent.application.llm_inference.core import analyse_url
+    from agent.application.llm_inference.essential import (
+        essentials_from_raw,
+        filename_from_url,
+        resolve_patents_with_api,
+        write_essential,
+    )
 
 
 class ModeComboBox(QComboBox):
@@ -52,9 +58,9 @@ class ModeComboBox(QComboBox):
         # Placeholder (visible in field, hidden in dropdown)
         self.addItem("Mode", userData=None)
         # Actual options
-        self.addItem("Brevets", userData="patents")
-        self.addItem("Produits", userData="products")
-        self.addItem("Complet", userData="full")
+        self.addItem("Patents", userData="patents")
+        self.addItem("Products", userData="products")
+        self.addItem("Full", userData="full")
         self.setCurrentIndex(0)
 
         # Disable placeholder and style it as a hint
@@ -183,7 +189,7 @@ class ChatUI(QWidget):
         layout.addLayout(top)
 
         # --- Source label
-        self.source_label = QLabel("Aucune source sélectionnée")
+        self.source_label = QLabel("No source selected")
         self.source_label.setObjectName("SourceLabel")
         layout.addWidget(self.source_label)
 
@@ -209,7 +215,7 @@ class ChatUI(QWidget):
 
         busy_row = QHBoxLayout()
         self.busy = QProgressBar()
-        self.busy.setRange(0, 0)  # indéterminé
+        self.busy.setRange(0, 0)  # indeterminate
         self.busy.setVisible(False)
         busy_row.addWidget(self.busy)
         layout.addLayout(busy_row)
@@ -232,22 +238,22 @@ class ChatUI(QWidget):
         if msg:
             self.status_label.setText(msg)
 
-    def _reset_source(self, msg: str = "Aucune source sélectionnée"):
+    def _reset_source(self, msg: str = "No source selected"):
         self.full_source = ""
-        self.source_label.setText("Aucune source sélectionnée")
+        self.source_label.setText("No source selected")
         self.status_label.setText(msg)
 
     def _mark_source_ready(self, txt: str, is_file: bool):
-        prefix = "PDF sélectionné" if is_file else "Source"
+        prefix = "Selected PDF" if is_file else "Source"
         self.full_source = txt
         self.source_label.setText(f"{prefix}: {self._short(txt)}")
         # keep status helpful but neutral
-        self.status_label.setText("Source prête — choisir un mode")
+        self.status_label.setText("Source ready — choose a mode")
 
     def _handle_source_text(self, txt: str, warn: bool) -> bool:
         txt = (txt or "").strip()
         if not txt:
-            self._reset_source("Choisir une source et un mode")
+            self._reset_source("Choose a source and a mode")
             return False
 
         import os
@@ -260,9 +266,9 @@ class ChatUI(QWidget):
             self._mark_source_ready(txt, is_file=False)
             return True
 
-        self._reset_source("Source invalide")
+        self._reset_source("Invalid source")
         if warn:
-            QMessageBox.warning(self, "Source invalide", "Colle une URL http(s) ou un chemin PDF existant.")
+            QMessageBox.warning(self, "Invalid source", "Paste an http(s) URL or an existing PDF path.")
         return False
 
     def on_url_changed(self, txt: str):
@@ -272,7 +278,7 @@ class ChatUI(QWidget):
         return self._handle_source_text(self.url_input.text(), warn=True)
 
     def open_pdf(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Choisir un PDF", "", "PDF (*.pdf)")
+        path, _ = QFileDialog.getOpenFileName(self, "Choose a PDF", "", "PDF (*.pdf)")
         if path:
             self._mark_source_ready(path, is_file=True)
 
@@ -284,22 +290,22 @@ class ChatUI(QWidget):
                 return
         source = self.full_source or (self.url_input.text() or "").strip()
         if not source:
-            QMessageBox.warning(self, "Aucune source", "Colle une URL ou importe un PDF.")
+            QMessageBox.warning(self, "No source", "Paste a URL or import a PDF.")
             return
 
         mode = self.mode_selector.currentData()
         if mode is None:
-            QMessageBox.warning(self, "Mode manquant", "Choisis un mode (Brevets, Produits ou Complet).")
+            QMessageBox.warning(self, "Missing mode", "Choose a mode (Patents, Products, or Full).")
             return
 
         # UI placeholders
-        self.output.setPlainText("[envoi en cours…]")
+        self.output.setPlainText("[sending…]")
         self.output.moveCursor(QTextCursor.MoveOperation.End)
-        self.log_output.setPlainText("[capture logs…]")
+        self.log_output.setPlainText("[capturing logs…]")
         self.log_output.moveCursor(QTextCursor.MoveOperation.End)
         self.source_label.setText(f"Source: {self._short(source)}")
 
-        self._set_busy(True, f"Envoi… (mode={mode})")
+        self._set_busy(True, f"Sending… (mode={mode})")
         log_buf = StringIO()
 
         try:
@@ -307,26 +313,26 @@ class ChatUI(QWidget):
                 answer = await analyse_url(source, mode=mode)
 
             logs = (log_buf.getvalue() or "").strip()
-            # Écriture essentielle auto pour l'UI
+            # Auto essential write for UI
             try:
                 products, patents = essentials_from_raw(answer or "", mode)
                 patents = resolve_patents_with_api(patents)
                 out_dir = Path("agent") / "evaluation" / "reports"
                 out_path = out_dir / filename_from_url(source, ext=".essential.ndjson")
                 write_essential(out_path, source, products, patents)
-                extra_log = f"[ESSENTIAL] Écrit {out_path}"
+                extra_log = f"[ESSENTIAL] Wrote {out_path}"
             except Exception as err:
-                extra_log = f"[ESSENTIAL][erreur] {err}"
+                extra_log = f"[ESSENTIAL][error] {err}"
 
-            self.output.setPlainText(answer or "[réponse vide]")
+            self.output.setPlainText(answer or "[empty response]")
             merged_logs = "\n".join([l for l in [logs, extra_log] if l])
-            self.log_output.setPlainText(merged_logs or "[aucun log]")
-            self.status_label.setText(f"Réponse reçue (mode={mode})")
+            self.log_output.setPlainText(merged_logs or "[no logs]")
+            self.status_label.setText(f"Response received (mode={mode})")
         except Exception as e:
             logs = (log_buf.getvalue() or "").strip()
-            self.output.setPlainText(f"[Erreur] {e}")
-            self.log_output.setPlainText(logs or "[aucun log]")
-            self.status_label.setText("Erreur")
+            self.output.setPlainText(f"[Error] {e}")
+            self.log_output.setPlainText(logs or "[no logs]")
+            self.status_label.setText("Error")
         finally:
             self._set_busy(False)
             # re-enable send according to mode selection

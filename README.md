@@ -56,7 +56,7 @@ python -m agent.llm_inference.cli --mode <mode> --input <path-or-url> [--ocr on|
 
 Available modes: `full`, `audit`, `patents`, `products`.
 
-By défaut, le CLI affiche le NDJSON sur la sortie standard et n’écrit aucun fichier. Ajoute `--write-essential` pour générer un fichier `*.essential.ndjson` minimal dans `agent/evaluation/reports/` (ou redirige la sortie avec `> fichier.ndjson` si tu veux tout le flux).
+By default, the CLI prints NDJSON to stdout and writes no file. Add `--write-essential` to generate a minimal `*.essential.ndjson` in `agent/evaluation/reports/` (or redirect with `> file.ndjson` if you want the full stream).
 
 ---
 
@@ -169,7 +169,7 @@ python agent/ui/Home.py
 
 > Tip: if you see import errors, make sure you are running from the repo root with the venv activated.
 
-L’UI écrit automatiquement un fichier essentiel `*.essential.ndjson` pour chaque run dans `agent/evaluation/reports/` (pas besoin de flag).
+The UI automatically writes an essential `*.essential.ndjson` for each run in `agent/evaluation/reports/` (no flag needed).
 
 ---
 
