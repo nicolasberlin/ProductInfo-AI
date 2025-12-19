@@ -270,6 +270,17 @@ python api/normalize_patents.py \
 
 ---
 
+### Logs & output formats
+
+For a detailed explanation of:
+- written output formats (`*.essential.ndjson`)
+- log fields (`MODE`, `RUN=A/B`, `OCR=on/off`, `pages`, `ocr_pages`, etc.)
+- how to interpret `[WARN][OCR]` when OCR changes results
+
+See: `docs/pipeline/logs.md`.
+
+---
+
 ## License
 
 See `LICENSE` at the repository root.

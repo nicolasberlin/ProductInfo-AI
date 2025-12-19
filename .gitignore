@@ -9,6 +9,9 @@ __pycache__/
 # Variables d’environnement (secrets, API keys)
 .env
 
+# Evaluation reports
+agent/evaluation/reports/
+
 # Dossiers de config d’éditeur
 .vscode/
 
