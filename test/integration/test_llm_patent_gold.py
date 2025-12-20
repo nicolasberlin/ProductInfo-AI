@@ -6,13 +6,13 @@ from rapidfuzz import fuzz
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from agent.evaluation.normalization import canonicalize_for_eval, normalize_pat, standard_pat_key
-from agent.llm.llm_utils import parse_json_lines
-from agent.llm_inference.core import analyse_url
+from agent.domain.evaluation.normalization import canonicalize_for_eval, normalize_pat, standard_pat_key
+from agent.infrastructure.llm.llm_utils import parse_json_lines
+from agent.application.llm_inference.core import analyse_url
 
 
 
@@ -86,7 +86,7 @@ def discover_cases(base_dir: Path):
     return cases
 
 
-GOLD_ROOT = Path(__file__).resolve().parents[1] / "agent" / "evaluation" / "gold"
+GOLD_ROOT = Path(__file__).resolve().parents[2] / "agent" / "domain" / "evaluation" / "gold"
 PATENT_CASES = discover_cases(GOLD_ROOT)
 
 

@@ -41,7 +41,22 @@ def _sanitize_raw(raw: str) -> str:
 
 
 # ----------------------------------------------------------------------
-# Normalisation business principale
+# Product normalization (lightweight)
+def normalize_prod(raw: str) -> str:
+    """
+    Normalize a product string for comparison:
+    - cast to string
+    - strip and collapse whitespace
+    - lowercase
+    """
+    if raw is None:
+        return ""
+    text = " ".join(str(raw).split()).strip().lower()
+    return text
+
+
+# ----------------------------------------------------------------------
+# Patent normalization
 # ----------------------------------------------------------------------
 def normalize_pat(raw: str) -> str:
     """
@@ -166,6 +181,7 @@ def standard_pat_key(raw: str) -> str | None:
 
 
 __all__ = [
+    "normalize_prod",
     "normalize_pat",
     "canonicalize_for_eval",
     "standard_pat_key",

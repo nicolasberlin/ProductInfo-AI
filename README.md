@@ -192,7 +192,7 @@ pytest -m llm -v
 ### Columns subset (slow / curated cases)
 
 ```bash
-pytest test/test_llm_patent_gold.py -m columns -n auto -s -v
+pytest test/integration/test_llm_patent_gold.py -m columns -n auto -s -v
 ```
 
 ### Filter by keyword (example: Horiba)
@@ -213,14 +213,14 @@ DEBUG_OCR=1 pytest -s \
 Note: pytest uses the `--ocr=on/off` syntax (equals sign), not `--ocr on/off`.
 
 ```bash
-pytest test/test_llm_patent_gold.py -k "terumo" -m columns -n auto -s -v --ocr=on
-pytest test/test_llm_patent_gold.py -k "terumo" -m columns -n auto -s -v --ocr=off
+pytest test/integration/test_llm_patent_gold.py -k "terumo" -m columns -n auto -s -v --ocr=on
+pytest test/integration/test_llm_patent_gold.py -k "terumo" -m columns -n auto -s -v --ocr=off
 ```
 
 Example (keyword + columns + parallel + OCR on):
 
 ```bash
-pytest test/test_llm_patent_gold.py -k "kraftheinz" -m columns -s -v -n auto --ocr=on
+pytest test/integration/test_llm_patent_gold.py -k "kraftheinz" -m columns -s -v -n auto --ocr=on
 ```
 
 ---
