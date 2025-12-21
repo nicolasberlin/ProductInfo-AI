@@ -41,12 +41,11 @@ python agent/ui/Home.py
 
 - The raw **NDJSON** appears in the main area.
 - An “essential” file `*.essential.ndjson` is written automatically to:
-  - `agent/evaluation/reports/essential/`
+  - `agent/reports/essential/`
   (no flag required)
 - Pipeline **stderr logs** are captured in the **Logs** panel.
 
 ## Tips / Troubleshooting
-
 - **OCR**: the UI inherits `USE_OCR` (default `1` if unset).
   - Disable OCR for a UI run:
 
@@ -55,4 +54,13 @@ python agent/ui/Home.py
     ```
 
 - If you see import errors, run the script **from the repo root** with the venv active.
-- For **batch** (many URLs/files), prefer the CLI (`agent/llm_inference/cli.py`).
+- For **batch** (many URLs/files), prefer the CLI (`agent/application/llm_inference/cli.py`).
+
+## Logs & output formats
+
+For a detailed explanation of:
+- written output formats (`*.essential.ndjson`)
+- log fields (`MODE`, `RUN=A/B`, `OCR=on/off`, `pages`, `ocr_pages`, etc.)
+- how to interpret `[WARN][OCR]` when OCR changes results
+
+See: `docs/pipeline/logs.md`.

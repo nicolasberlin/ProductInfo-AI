@@ -6,7 +6,7 @@ Features:
 
 - LLM-based extraction pipeline
 - Optional OCR (PDF → images → text)
-- Gold data under `agent/evaluation/gold/**`
+- Gold data under `agent/domain/evaluation/gold/**`
 - Pytest-based evaluation harness
 
 ---
@@ -51,12 +51,12 @@ python main.py
 ### LLM inference CLI
 
 ```bash
-python -m agent.llm_inference.cli --mode <mode> --input <path-or-url> [--ocr on|off]
+python -m agent.application.llm_inference.cli --mode <mode> --input <path-or-url> [--ocr on|off]
 ```
 
 Available modes: `full`, `audit`, `patents`, `products`.
 
-By default, the CLI prints NDJSON to stdout and writes no file. Add `--write-essential` to generate a minimal `*.essential.ndjson` in `agent/evaluation/reports/` (or redirect with `> file.ndjson` if you want the full stream).
+By default, the CLI prints NDJSON to stdout and writes no file. Add `--write-essential` to generate a minimal `*.essential.ndjson` in `agent/reports/` (or redirect with `> file.ndjson` if you want the full stream).
 
 ---
 
@@ -65,23 +65,23 @@ By default, the CLI prints NDJSON to stdout and writes no file. Add `--write-ess
 #### Local PDF → patent extraction
 
 ```bash
-python -m agent.llm_inference.cli --mode patents --input path/to/document.pdf
+python -m agent.application.llm_inference.cli --mode patents --input path/to/document.pdf
 ```
 
 #### Remote PDF → product extraction
 
 ```bash
-python -m agent.llm_inference.cli --mode products \
+python -m agent.application.llm_inference.cli --mode products \
   --input "https://industrial.panasonic.com/cdbs/www-data/pdf/RDD0000/ast-ind-139031.pdf"
 ```
 
 #### Folder (batch)
 
-Run the full pipeline on every `.url` file in `agent/evaluation/gold/columns`:
+Run the full pipeline on every `.url` file in `agent/domain/evaluation/gold/columns`:
 
 ```bash
-python -m agent.llm_inference.cli --mode full \
-  --input agent/evaluation/gold/columns
+python -m agent.application.llm_inference.cli --mode full \
+  --input agent/domain/evaluation/gold/columns
 ```
 
 The `--input` argument accepts:
@@ -114,15 +114,15 @@ When OCR is enabled, the pipeline runs OCR on:
 ### Normal usage (recommended)
 
 ```bash
-python -m agent.llm_inference.cli --mode patents --ocr on  --input path/to/document.pdf
-python -m agent.llm_inference.cli --mode patents --ocr off --input path/to/document.pdf
+python -m agent.application.llm_inference.cli --mode patents --ocr on  --input path/to/document.pdf
+python -m agent.application.llm_inference.cli --mode patents --ocr off --input path/to/document.pdf
 ```
 
 ### Manual debugging via environment variables
 
 ```bash
-USE_OCR=1 DEBUG_OCR=1 python -m agent.llm_inference.cli --mode patents --input path/to/document.pdf
-USE_OCR=0 python -m agent.llm_inference.cli --mode patents --input path/to/document.pdf
+USE_OCR=1 DEBUG_OCR=1 python -m agent.application.llm_inference.cli --mode patents --input path/to/document.pdf
+USE_OCR=0 python -m agent.application.llm_inference.cli --mode patents --input path/to/document.pdf
 ```
 
 ### Optional: HTML OCR renderer (Playwright)
@@ -169,7 +169,7 @@ python agent/ui/Home.py
 
 > Tip: if you see import errors, make sure you are running from the repo root with the venv activated.
 
-The UI automatically writes an essential `*.essential.ndjson` for each run in `agent/evaluation/reports/` (no flag needed).
+The UI automatically writes an essential `*.essential.ndjson` for each run in `agent/reports/` (no flag needed).
 
 ---
 
@@ -181,12 +181,6 @@ All commands assume you are in the repository root and the virtualenv is active.
 
 ```bash
 pytest
-```
-
-### LLM-only tests
-
-```bash
-pytest -m llm -v
 ```
 
 ### Columns subset (slow / curated cases)
@@ -227,13 +221,6 @@ pytest test/integration/test_llm_patent_gold.py -k "kraftheinz" -m columns -s -v
 
 ## Debugging
 
-### Inspect gold data
-
-```bash
-wc -l agent/evaluation/gold/.../*.ndjson
-head -n 20 agent/evaluation/gold/.../case_name.ndjson
-cat agent/evaluation/gold/.../case_name.url
-```
 
 ### Preview OCR text without running the full pipeline
 
@@ -246,8 +233,13 @@ python scripts/debugging_tools.py "https://example.com/my_doc.pdf"
 ## UCID lookup (Google Patents API)
 
 ```bash
-python api/get_ucid.py "10,277,158" US
-python api/get_ucid.py "EP 2 435 612"
+# Run as module (recommended)
+python -m agent.entrypoints.api.get_ucid "10,277,158" US
+python -m agent.entrypoints.api.get_ucid "EP 2 435 612"
+
+# Or run the script file directly from the package path
+python agent/entrypoints/api/get_ucid.py "10,277,158" US
+python agent/entrypoints/api/get_ucid.py "EP 2 435 612"
 ```
 
 ---
@@ -255,9 +247,15 @@ python api/get_ucid.py "EP 2 435 612"
 ## Normalize NDJSON file (example)
 
 ```bash
-python api/normalize_patents.py \
-  < agent/evaluation/gold/columns/kraftheinz/kraftheinz_seed_2024.ndjson \
-  > agent/evaluation/gold/columns/kraftheinz/kraftheinz_seed_2024.normalized.ndjson
+# Run as module (recommended)
+python -m agent.entrypoints.api.normalize_patents \
+  < agent/domain/evaluation/gold/columns/kraftheinz/kraftheinz_seed_2024.ndjson \
+  > agent/domain/evaluation/gold/columns/kraftheinz/kraftheinz_seed_2024.normalized.ndjson
+
+# Or run the script file directly from the package path
+python agent/entrypoints/api/normalize_patents.py \
+  < agent/domain/evaluation/gold/columns/kraftheinz/kraftheinz_seed_2024.ndjson \
+  > agent/domain/evaluation/gold/columns/kraftheinz/kraftheinz_seed_2024.normalized.ndjson
 ```
 
 ---

@@ -95,7 +95,7 @@ def main():
     parser.add_argument(
         "--write-essential",
         action="store_true",
-        help="Write an essential NDJSON (products/patents) into agent/evaluation/reports/essential.",
+        help="Write an essential NDJSON (products/patents) into agent/reports/essential.",
     )
     args = parser.parse_args()
 
@@ -120,7 +120,7 @@ def main():
                 if args.write_essential:
                     products, patents = essentials_from_raw(res, args.mode)
                     patents = resolve_patents_with_api(patents)
-                    out_dir = Path("agent") / "evaluation" / "reports"
+                    out_dir = Path("agent") / "reports"
                     out_path = out_dir / filename_from_url(targets[0], ext=".essential.ndjson")
                     write_essential(out_path, targets[0], products, patents)
                     print(f"[ESSENTIAL] Écrit {out_path}", file=sys.stderr, flush=True)
@@ -133,7 +133,7 @@ def main():
                     if args.write_essential:
                         products, patents = essentials_from_raw(r, args.mode)
                         patents = resolve_patents_with_api(patents)
-                        out_dir = Path("agent") / "evaluation" / "reports"
+                        out_dir = Path("agent") / "reports"
                         out_path = out_dir / filename_from_url(u, ext=".essential.ndjson")
                         write_essential(out_path, u, products, patents)
                         print(f"[ESSENTIAL] Écrit {out_path}", file=sys.stderr, flush=True)

@@ -283,9 +283,9 @@ def normalize_pages(pages: Union[str, List[str], None]) -> List[str]:
 # ------------------------------------------------------------
 
 def write_report(result, url, fmt="ndjson"):
-    """Write output into agent/evaluation/reports/"""
+    """Write output into agent/reports/"""
     data = parse_json_lines(result)
-    reports_dir = Path("agent/evaluation/reports")
+    reports_dir = Path("agent/reports")
     reports_dir.mkdir(parents=True, exist_ok=True)
     slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", url.split("/")[-1])
     out_path = reports_dir / f"{slug}.{fmt}"

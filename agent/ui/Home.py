@@ -317,7 +317,7 @@ class ChatUI(QWidget):
             try:
                 products, patents = essentials_from_raw(answer or "", mode)
                 patents = resolve_patents_with_api(patents)
-                out_dir = Path("agent") / "evaluation" / "reports"
+                out_dir = Path("agent") / "reports"
                 out_path = out_dir / filename_from_url(source, ext=".essential.ndjson")
                 write_essential(out_path, source, products, patents)
                 extra_log = f"[ESSENTIAL] Wrote {out_path}"

@@ -93,7 +93,7 @@ Full pipeline: products + patents + mapping + audit.
 [MODE=full] [OCR-CHECK][patents] A (no OCR)=1 | B (with OCR)=1 | +OCR=0 | -OCR=0
 [MODE=full] [OCR-CHECK][patents] No difference between final sets (A vs B)
 
-[ESSENTIAL] Wrote agent/evaluation/reports/patents-shooter__92eca5cf81.essential.ndjson
+[ESSENTIAL] Wrote agent/reports/patents-shooter__92eca5cf81.essential.ndjson
 ```
 
 ### Fields definition
@@ -156,12 +156,12 @@ If B differs → the PDF’s native text was missing something (or OCR added noi
 You may see a line like:
 
 ```text
-[ESSENTIAL] Wrote agent/evaluation/reports/patents-shooter__92eca5cf81.essential.ndjson
+[ESSENTIAL] Wrote agent/reports/patents-shooter__92eca5cf81.essential.ndjson
 ```
 
 **Notes**
 
-* It is written under `agent/evaluation/reports/`.
+* It is written under `agent/reports/`.
 * File name includes the source slug + a hash-like suffix.
 * NDJSON = one JSON object per line (easy for streaming and diffing).
 
