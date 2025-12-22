@@ -1,7 +1,12 @@
-numpy
-opencv-python-headless
-pymupdf
-pytesseract
+beautifulsoup4
+openai
 pdf2image
+pdfplumber
 Pillow
 playwright
+pytesseract
+PyQt6
+qasync
+rapidfuzz
+requests
+pytest
