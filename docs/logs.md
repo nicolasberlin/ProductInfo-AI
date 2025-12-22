@@ -1,4 +1,3 @@
-````md
 # Logs & Output Formats (OCR A/B Validation)
 
 ## Important
@@ -11,13 +10,6 @@
   - **RUN A**: without OCR (native PDF text)
   - **RUN B**: with OCR (image-based text)
 - Goal: detect whether OCR changes the extracted **products** / **patents**.
-
----
-
-## Source example
-```json
-{"source":"https://www.feradyne.com/wp-content/uploads/2024/05/patents-shooter.pdf"}
-````
 
 ---
 
@@ -201,5 +193,3 @@ You may see a line like:
 
 
 ---
-
-```

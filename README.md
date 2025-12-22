@@ -199,7 +199,7 @@ pytest -k "horiba" -m llm -n auto -s -v
 
 ```bash
 DEBUG_OCR=1 pytest -s \
-  'test/test_llm_patent_coverage_all_gold[industrial_panasonic]'
+  'test/integration/test_llm_patent_gold.py::test_llm_patent_coverage_all_gold[industrial_panasonic]'
 ```
 
 ### OCR control in tests (if supported by the test harness)
@@ -225,7 +225,7 @@ pytest test/integration/test_llm_patent_gold.py -k "kraftheinz" -m columns -s -v
 ### Preview OCR text without running the full pipeline
 
 ```bash
-python scripts/debugging_tools.py "https://example.com/my_doc.pdf"
+python -m agent.application.llm_inference.cli --mode audit --input "https://example.com/my_doc.pdf" --ocr on
 ```
 
 ---
@@ -275,7 +275,7 @@ For a detailed explanation of:
 - log fields (`MODE`, `RUN=A/B`, `OCR=on/off`, `pages`, `ocr_pages`, etc.)
 - how to interpret `[WARN][OCR]` when OCR changes results
 
-See: `docs/pipeline/logs.md`.
+See: `docs/logs.md`.
 
 ---
 
