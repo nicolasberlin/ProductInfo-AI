@@ -142,10 +142,24 @@ Set `OPENAI_API_KEY` before running the CLI or UI:
 # one-time in the shell
 export OPENAI_API_KEY="sk-..."
 
-# or keep it locally (not committed), then source it
+
+```
+
+Alternatively keep the key in a local `.env` file (do NOT commit this file):
+
+```bash
 cp .env.example .env
+# edit .env and set OPENAI_API_KEY inside, then:
 source .env
 ```
+
+Security note: do NOT hard-code your API key into source files (for example in `agent/infrastructure/llm/llm_calls.py`).
+Always load it from the environment or from an untracked `.env` file.
+
+Note: if you prefer convenience for local experiments, you can temporarily place the key directly in
+`agent/infrastructure/llm/llm_calls.py` (the `api_key` variable), but be extremely careful not to commit
+that change or share the repository. This is less secure than using environment variables and is
+strongly discouraged for anything other than quick local tests.
 
 ---
 

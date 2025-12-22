@@ -41,8 +41,8 @@ python agent/ui/Home.py
 
 - The raw **NDJSON** appears in the main area.
 - An “essential” file `*.essential.ndjson` is written automatically to:
-  - `agent/reports/essential/`
-  (no flag required)
+  - `agent/reports/`
+  (no flag required; the UI creates the file for each run)
 - Pipeline **stderr logs** are captured in the **Logs** panel.
 
 ## Tips / Troubleshooting
@@ -63,4 +63,4 @@ For a detailed explanation of:
 - log fields (`MODE`, `RUN=A/B`, `OCR=on/off`, `pages`, `ocr_pages`, etc.)
 - how to interpret `[WARN][OCR]` when OCR changes results
 
-See: `docs/pipeline/logs.md`.
+See: `docs/logs.md`.
